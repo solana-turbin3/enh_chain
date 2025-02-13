@@ -137,6 +137,17 @@ pub fn generate_base_chain_instructions(transactions: &[TransactionMetadata]) ->
                             .unwrap();
                         }
                         system_instruction::transfer(&from, &to, *amount)
+                    },
+                    TransactionMetadata::CloseAccount { account, destination, owner } => {
+                        
+                            spl_token::instruction::close_account(
+                                &spl_token::id(),
+                                 account,
+                                  destination,
+                                   owner,
+                                    &[],
+                                    ).unwrap()
+                        
                     }
                 }
             })

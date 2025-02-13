@@ -105,6 +105,13 @@ impl ChainTransaction {
                     to,
                     amount
                 }
+            },
+            TransactionMetadata::CloseAccount { account, destination, owner } => {
+                TransactionMetadata::CloseAccount{
+                    account,
+                    destination,
+                    owner,
+                }
             }
         },
         app_user_base,
@@ -204,6 +211,14 @@ pub fn get_all_transaction_metadata_from_transaction(transaction : Vec<&MakeTran
                    amount 
                  };
                  metadata_vec.push(transaction_metadata);
+            },
+            TransactionMetadata::CloseAccount { account, destination, owner } => {
+                let transaction_metadata = TransactionMetadata::CloseAccount { 
+                    account,
+                    destination,
+                    owner,
+                };
+                metadata_vec.push(transaction_metadata);
             }
         }
     }

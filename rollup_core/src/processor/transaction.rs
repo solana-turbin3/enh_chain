@@ -1,11 +1,9 @@
 use {
-    solana_sdk::{
+    serde::de, solana_sdk::{
         instruction::Instruction as SolanaInstruction, pubkey::Pubkey, signature::Keypair, system_instruction, transaction::{
             SanitizedTransaction as SolanaSanitizedTransaction, Transaction as SolanaTransaction,
         }
-    },
-    spl_associated_token_account::get_associated_token_address,
-    std::collections::HashSet,
+    }, spl_associated_token_account::get_associated_token_address, std::collections::HashSet
 };
 
 #[derive(Clone,Debug)]
@@ -15,8 +13,12 @@ pub enum TransactionMetadata {
          from: Pubkey,
          to: Pubkey,
          amount: u64,
-    }
-    
+    },
+    CloseAccount {
+        account : Pubkey,
+        destination : Pubkey,
+        owner : Pubkey,
+    }    
 }
 
 impl From<&TransactionMetadata> for SolanaInstruction {
@@ -38,6 +40,17 @@ impl From<&TransactionMetadata> for SolanaInstruction {
                 } else {
                     system_instruction::transfer(&from, &to, amount)
                 }
+            },
+            TransactionMetadata::CloseAccount { account, destination, owner} => {
+                let account   = get_associated_token_address(&owner, &spl_token::native_mint::id());
+                    spl_token::instruction::close_account(
+                        &spl_token::id(),
+                         &account,
+                         destination,
+                           owner,
+                            &[],
+                            )
+                            .unwrap()
             }
     }
 }
@@ -48,9 +61,11 @@ impl From<&TransactionMetadata> for SolanaTransaction {
         match value {
             TransactionMetadata::Transfer { mint, from, to, amount } => {
                 SolanaTransaction::new_with_payer(&[SolanaInstruction::from(value)], Some(from))
+            },
+            TransactionMetadata::CloseAccount { account, destination, owner } => {
+                SolanaTransaction::new_with_payer(&[SolanaInstruction::from(value)], Some(owner))
             }
         }
-        //SolanaTransaction::new_with_payer(&[SolanaInstruction::from(value)], Some(value.from))
     }
 }
 
