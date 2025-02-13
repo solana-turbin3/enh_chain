@@ -25,27 +25,32 @@ fn test_full_flow() {
 
     let w_account = Keypair::new().pubkey();  
     let r_account = Keypair::new().pubkey();
-    let to = Keypair::new();
+    let to1 = Keypair::new();
+    println!("PK1{:?}",to1.pubkey());
+    let to2 = Keypair::new();
+    println!("PK2{:?}",to2.pubkey());
+    let to3 = Keypair::new();
+    println!("PK3{:?}",to3.pubkey());
 
-    let transaction_metadata = TransactionMetadata {
+    let transaction_metadata = TransactionMetadata::Transfer {
         amount : 10_000_000,
         mint : None,
         from : user_key.pubkey(),
-        to : to.pubkey()
+        to : to1.pubkey()
     };
 
-    let transaction_metadata_2 = TransactionMetadata {
+    let transaction_metadata_2 = TransactionMetadata::Transfer {
         amount : 10_000_000,
         mint : None,
         from : user_key.pubkey(),
-        to : to.pubkey()
+        to : to2.pubkey()
     };
 
-     let transaction_metadata_3 = TransactionMetadata {
+     let transaction_metadata_3 = TransactionMetadata::Transfer {
         amount : 10_000_000,
         mint : None,
         from : user_key.pubkey(),
-        to : to.pubkey()
+        to : to3.pubkey()
     };
 
     let transaction_accounts = AccountInvolvedInTransaction {
@@ -68,9 +73,9 @@ fn test_full_flow() {
     let mut thread_aware_locks = ThreadAwareLocks::new(4);
     let mut transaction_on_thread = TransactionsOnThread::default();
     
-    chain_trnasaction.push_new_transaction_to_the_main_queue(&mut lineup_queue, transaction_accounts, transaction_metadata , &mut app_user_base,program_id , "user1".to_string(),1);
-    chain_trnasaction.push_new_transaction_to_the_main_queue(&mut lineup_queue, transaction_accounts_2, transaction_metadata_2 , &mut app_user_base,program_id , "user1".to_string(),2);
-    chain_trnasaction.push_new_transaction_to_the_main_queue(&mut lineup_queue, transaction_accounts_3, transaction_metadata_3 , &mut app_user_base,program_id , "user1".to_string(),3);
+    chain_trnasaction.push_new_transaction_to_the_main_queue(&mut lineup_queue, transaction_accounts, transaction_metadata.clone() , &mut app_user_base,program_id , "user1".to_string(),1);
+    chain_trnasaction.push_new_transaction_to_the_main_queue(&mut lineup_queue, transaction_accounts_2, transaction_metadata_2.clone() , &mut app_user_base,program_id , "user1".to_string(),2);
+    chain_trnasaction.push_new_transaction_to_the_main_queue(&mut lineup_queue, transaction_accounts_3, transaction_metadata_3.clone() , &mut app_user_base,program_id , "user1".to_string(),3);
 
    chain_trnasaction.put_all_the_transaction_in_the_lineup_queue(&mut lineup_queue);
 
@@ -102,7 +107,7 @@ fn test_full_flow() {
    println!("len{:?}",transaction_on_thread.trnasaction_on_thread);
 
    chain_trnasaction.process_all_transaction_from_thread_1(transaction_on_thread.clone() , 1);
-   chain_trnasaction.process_all_transaction_from_thread_1(transaction_on_thread.clone() , 2);
+   chain_trnasaction.process_all_transaction_from_thread_1(transaction_on_thread.clone() , 2 );
 
    println!("thread_load_counter {:?}" , thread_load_counter.load_counter)
    

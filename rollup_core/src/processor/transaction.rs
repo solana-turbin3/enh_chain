@@ -9,43 +9,48 @@ use {
 };
 
 #[derive(Clone,Debug)]
-pub struct TransactionMetadata {
-    pub mint: Option<Pubkey>,
-    pub from: Pubkey,
-    pub to: Pubkey,
-    pub amount: u64,
+pub enum TransactionMetadata {
+    Transfer {
+         mint: Option<Pubkey>,
+         from: Pubkey,
+         to: Pubkey,
+         amount: u64,
+    }
+    
 }
-
 
 impl From<&TransactionMetadata> for SolanaInstruction {
     fn from(value: &TransactionMetadata) -> Self {
-        let TransactionMetadata {
-            mint,
-            from,
-            to,
-            amount,
-
-        } = value;
-        if let Some(mint) = mint {
-            let source_pubkey = get_associated_token_address(from, mint);
-            let destination_pubkey = get_associated_token_address(to, mint);
-            return spl_token::instruction::transfer(
-                &spl_token::id(),
-                &source_pubkey,
-                &destination_pubkey,
-                from,
-                &[],
-                *amount,
-            )
-            .unwrap();
-        }
-        system_instruction::transfer(from, to, *amount)
+        match value {
+            &TransactionMetadata::Transfer { mint, from, to, amount } => {
+                if let Some(mint) = mint {
+                    let source_pubkey = get_associated_token_address(&from, &mint);
+                    let destination_pubkey = get_associated_token_address(&to, &mint);
+                    spl_token::instruction::transfer(
+                        &spl_token::id(),
+                        &source_pubkey,
+                        &destination_pubkey,
+                        &from,
+                        &[],
+                        amount,
+                    )
+                    .unwrap()
+                } else {
+                    system_instruction::transfer(&from, &to, amount)
+                }
+            }
     }
+}
 }
 
 impl From<&TransactionMetadata> for SolanaTransaction {
     fn from(value: &TransactionMetadata) -> Self {
-        SolanaTransaction::new_with_payer(&[SolanaInstruction::from(value)], Some(&value.from))
+        match value {
+            TransactionMetadata::Transfer { mint, from, to, amount } => {
+                SolanaTransaction::new_with_payer(&[SolanaInstruction::from(value)], Some(from))
+            }
+        }
+        //SolanaTransaction::new_with_payer(&[SolanaInstruction::from(value)], Some(value.from))
     }
 }
 

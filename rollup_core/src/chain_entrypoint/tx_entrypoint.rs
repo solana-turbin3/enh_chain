@@ -3,14 +3,6 @@ use std::{collections::HashMap, default};
 use solana_sdk::{blake3::Hash, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use crate::{line_up_queue::line_up_queue::{AccountInvolvedInTransaction, LineUpQueue}, processor::{engine::PayTubeChannel, setup::{system_account, TestValidatorContext}, transaction::TransactionMetadata}, scheduler::read_write_locks::{ThreadAwareLocks, ThreadLoadCounter}, users_handler::user_handler::AppUserBase};
 
-// #[derive(Clone)]
-// pub struct TransferTransactionMetadata {
-//     pub mint: Option<Pubkey>,
-//     pub from: Pubkey,
-//     pub to: Pubkey,
-//     pub amount: u64,
-// }
-
 // hash
 // eunum
 // fetch stage
@@ -104,11 +96,16 @@ impl ChainTransaction {
         let new_transaction = self.create_new_transaction(tx_id, "transfer".to_string(), AccountInvolvedInTransaction{
             is_writeable_accounts : account.is_writeable_accounts,
             non_writeable_accounts : account.non_writeable_accounts
-        },1 , TransactionMetadata {
-            mint : Some(transaction_metadata.mint).unwrap(),
-            from : transaction_metadata.from,
-            to : transaction_metadata.to,
-            amount : transaction_metadata.amount
+        },1 ,
+        match transaction_metadata {
+            TransactionMetadata::Transfer { mint, from, to, amount } => {
+                TransactionMetadata::Transfer {
+                    mint : Some(mint).unwrap(),
+                    from,
+                    to,
+                    amount
+                }
+            }
         },
         app_user_base,
         program_id,
@@ -137,7 +134,9 @@ impl ChainTransaction {
 
     
     pub fn take_out_individual_transaction_and_apply_RWlocks(&mut self,lineup_queue : &mut LineUpQueue, thread_aware_locks : &mut ThreadAwareLocks , transaction_on_thread : &mut TransactionsOnThread , thread_load_counter : &mut ThreadLoadCounter) {
+        println!("haha");
         let transactions: Vec<_> = lineup_queue.lineup_queue.iter().cloned().collect();
+        println!("jaja{:?}",transactions);
 
         for transaction in transactions {
 
@@ -161,6 +160,7 @@ impl ChainTransaction {
 
     pub fn get_all_transaction_on_a_thread(&mut  self,  tsx_on_thread : TransactionsOnThread, thread_id : usize) -> Vec<&MakeTransaction> {
         let ids: Vec<u64> = TransactionsOnThread::get_all_tx_ids_for_thread(&tsx_on_thread, thread_id);
+        print!("check_get_all{:?}",ids);
         let mut all_transaction_on_thread_id = Vec::new();
         for id in ids { 
             let single_txs = self.get_single_transaction_on_a_particular_thread(id);
@@ -175,7 +175,6 @@ impl ChainTransaction {
         println!("side_tx_res{:?}",transaction_on_thread_1);
         let transaction_metadata = get_all_transaction_metadata_from_transaction(transaction_on_thread_1.clone());
         let final_transaction_metadata  = transaction_metadata.as_slice();
-
 
         let accounts  = prepare_account_for_the_transaction(transaction_on_thread_1.clone());
     
@@ -196,13 +195,17 @@ impl ChainTransaction {
 pub fn get_all_transaction_metadata_from_transaction(transaction : Vec<&MakeTransaction>) -> Vec<TransactionMetadata> {
     let mut metadata_vec : Vec<TransactionMetadata> = Vec::new();
     for transaction in transaction {
-        let transaction_metadata = TransactionMetadata {
-           mint : transaction.transaction_metadata.mint,
-          to : transaction.transaction_metadata.to,
-          from : transaction.transaction_metadata.from,
-          amount : transaction.transaction_metadata.amount 
-        };
-        metadata_vec.push(transaction_metadata);
+        match transaction.transaction_metadata {
+            TransactionMetadata::Transfer { mint, from, to, amount } => {
+                let transaction_metadata = TransactionMetadata::Transfer {
+                    mint,
+                   to,
+                   from,
+                   amount 
+                 };
+                 metadata_vec.push(transaction_metadata);
+            }
+        }
     }
     metadata_vec
 }
